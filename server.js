@@ -747,14 +747,50 @@ app.get("/caloriecounter/:username/snacks", async (req, res) => {
   }
 });
 
+app.get("/caloriecounter/:username/total", async (req, res) => {
+  const { username } = req.params;
+  if (!username) {
+    return res.status(400).json({ error: "Username is required in URL path" });
+  }
+  try {
+    const db = getDb();
+    const entry = await db.collection("calories").findOne({ username });
+    res.json({ username, totalCalories: entry ? entry.totalCalories : 0 });
+  } catch (err) {
+    console.error("Error fetching total calories:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
+// PUT total calories for a user (create or update)
+app.put("/caloriecounter/:username/total", async (req, res) => {
+  const { username } = req.params;
+  const { totalCalories } = req.body;
+  if (!username || typeof totalCalories !== "number") {
+    return res
+      .status(400)
+      .json({ error: "Username and totalCalories (number) required" });
+  }
+  try {
+    const db = getDb();
+    await db
+      .collection("calories")
+      .updateOne({ username }, { $set: { totalCalories } }, { upsert: true });
+    res.json({ success: true, username, totalCalories });
+  } catch (err) {
+    console.error("Error saving total calories:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Job pentru resetarea caloriilor la 00:01 în fiecare zi
 schedule.scheduleJob('1 0 * * *', async function () {
   try {
     const db = getDb();
-    const result = await db.collection("food").deleteMany({});
-    console.log(`[AUTO-CLEANUP] Deleted ${result.deletedCount} food entries at 00:01`);
+    const result = await db.collection("calories").deleteMany({});
+    console.log(`[AUTO-CLEANUP] Deleted ${result.deletedCount} calories entries at 00:01`);
   } catch (err) {
-    console.error("[AUTO-CLEANUP] Error deleting food entries:", err);
+    console.error("[AUTO-CLEANUP] Error deleting calories entries:", err);
   }
 });
 
