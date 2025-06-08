@@ -43,7 +43,8 @@ app.use(
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",
-        "https://fatfitb-test.onrender.com"
+        "https://fatfitb-test.onrender.com",
+        "https://fatfit.onrender.com",
       ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
