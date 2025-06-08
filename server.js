@@ -40,7 +40,17 @@ connectToDatabase();
 // IMPORTANT: For production, change this to your specific frontend domain!
 app.use(
   cors({
-    origin: "http://localhost:5173", // Set to your frontend's URL, not "*"
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "https://fatfitb-test.onrender.com"
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
