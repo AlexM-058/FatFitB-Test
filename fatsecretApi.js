@@ -43,6 +43,18 @@ const searchFood = async (query) => {
         },
     });
     console.log('FatSecret API search response:', searchResponse.data); // <-- logare răspuns complet pentru search
+
+    const foods = searchResponse.data.foods && searchResponse.data.foods.food;
+    if (Array.isArray(foods)) {
+        const results = foods.map(food => {
+            // ...prelucrare food...
+            return food;
+        });
+        // ...folosește results după nevoie...
+    } else {
+        console.error('foods.food nu este un array:', foods);
+    }
+
     return searchResponse.data;
 };
 
