@@ -3,7 +3,6 @@ import fetch from "node-fetch";
 let fatSecretToken = null;
 let tokenExpiry = 0; // Token expiry timestamp
 
-
 export const getFatSecretToken = async () => {
   const clientId = process.env.FATSECRET_CLIENT_ID;
   const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
