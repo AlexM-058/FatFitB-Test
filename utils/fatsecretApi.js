@@ -1,28 +1,32 @@
 import fetch from "node-fetch";
 
 let fatSecretToken = null;
-let tokenExpiry = 0;
+let tokenExpiry = 0; // Token expiry timestamp
 
-// ===============================
-// Get FatSecret Access Token
-// ===============================
 export const getFatSecretToken = async () => {
   const clientId = process.env.FATSECRET_CLIENT_ID;
   const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
 
+  console.log("FATSECRET_CLIENT_ID:", clientId);
+  console.log("FATSECRET_CLIENT_SECRET:", clientSecret ? "*****" : null);
+
   if (!clientId || !clientSecret) {
     console.error(
-      "❌ FATSECRET_CLIENT_ID or FATSECRET_CLIENT_SECRET missing in .env"
+      "FATSECRET_CLIENT_ID or FATSECRET_CLIENT_SECRET is not defined in environment variables"
     );
-    throw new Error("Missing API credentials");
+    throw new Error(
+      "API credentials missing. Please check your environment variables."
+    );
   }
 
-  // Use cached token if still valid
+  // Return cached token if still valid
   if (fatSecretToken && Date.now() < tokenExpiry) {
+    console.log("Using cached FatSecret token");
     return fatSecretToken;
   }
 
   try {
+    // Request new token from OAuth endpoint
     const response = await fetch("https://oauth.fatsecret.com/connect/token", {
       method: "POST",
       headers: {
@@ -36,27 +40,33 @@ export const getFatSecretToken = async () => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`❌ Token error: ${response.status} - ${errorText}`);
+      console.error(
+        `Failed to get FatSecret token: ${response.status} - ${errorText}`
+      );
+      throw new Error(
+        `Failed to get FatSecret token: ${response.status} - ${errorText}`
+      );
     }
 
     const data = await response.json();
     fatSecretToken = data.access_token;
     tokenExpiry = Date.now() + data.expires_in * 1000 - 60000;
-
+    console.log(
+      "Received new FatSecret token, expires in",
+      data.expires_in,
+      "seconds"
+    );
     return fatSecretToken;
   } catch (error) {
-    console.error("❌ Error fetching FatSecret token:", error.message);
-    throw error;
+    console.error("Error fetching FatSecret token:", error);
+    throw error; // Propagate error
   }
 };
 
-// ===============================
-// Search for foods
-// ===============================
+// Search foods by query string using FatSecret API
 export const searchFoods = async (query) => {
   try {
     const token = await getFatSecretToken();
-
     const response = await fetch(
       "https://platform.fatsecret.com/rest/server.api",
       {
@@ -73,56 +83,54 @@ export const searchFoods = async (query) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`❌ API error: ${errorText}`);
+      console.error(`FatSecret API error: ${errorText}`);
+      throw new Error(`FatSecret API error: ${errorText}`);
     }
 
-    const result = await response.json();
-    return result;
+    const json = await response.json();
+    console.log("FatSecret API response for foods.search:", json);
+    return json;
   } catch (err) {
-    console.error("❌ Error searching foods:", err.message);
-    throw err;
+    console.error("Error searching FatSecret foods:", err);
+    throw err; // Propagate error
   }
 };
 
-// ===============================
-// Filter & process foods
-// ===============================
+// Process raw food data to extract key nutritional info and clean unnecessary fields
 export const filterFoods = (query) => {
   try {
-    const foodonly = query?.foods?.food;
-
-    if (!Array.isArray(foodonly)) {
-      console.warn("⚠️ No foods found or invalid structure:", foodonly);
+    const foodonly = query.foods?.food;
+    if (!foodonly) {
+      console.warn("No foods found in response to filter");
       return [];
     }
 
-    return foodonly.map((food) => {
+    foodonly.forEach((food) => {
+      delete food.food_url;
+
       const description = food.food_description || "";
 
+      // Extract calories, fat, carbs, protein from description text
       const caloriesMatch = description.match(/Calories:\s*(\d+)\s*kcal/i);
       const fatMatch = description.match(/Fat:\s*([\d.]+)g/i);
       const carbsMatch = description.match(/Carbs:\s*([\d.]+)g/i);
       const proteinMatch = description.match(/Protein:\s*([\d.]+)g/i);
 
-      return {
-        food_id: food.food_id,
-        food_name: food.food_name,
-        brand_name: food.brand_name,
-        food_kcal: caloriesMatch ? Number(caloriesMatch[1]) : null,
-        food_fat: fatMatch ? Number(fatMatch[1]) : null,
-        food_carbs: carbsMatch ? Number(carbsMatch[1]) : null,
-        food_protein: proteinMatch ? Number(proteinMatch[1]) : null,
-      };
+      food.food_kcal = caloriesMatch ? Number(caloriesMatch[1]) : null;
+      food.food_fat = fatMatch ? Number(fatMatch[1]) : null;
+      food.food_carbs = carbsMatch ? Number(carbsMatch[1]) : null;
+      food.food_protein = proteinMatch ? Number(proteinMatch[1]) : null;
+
+      delete food.food_description;
     });
+    return foodonly;
   } catch (err) {
-    console.error("❌ Error filtering foods:", err.message);
-    throw err;
+    console.error("Error filtering foods:", err);
+    throw err; // Propagate error
   }
 };
 
-// ===============================
-// Search for recipes
-// ===============================
+// Fetch recipe types from FatSecret API
 export const searchRecipes = async (query, options = {}) => {
   try {
     const token = await getFatSecretToken();
@@ -138,7 +146,6 @@ export const searchRecipes = async (query, options = {}) => {
     if (options.recipe_types) {
       params.append("recipe_types", options.recipe_types);
     }
-
     if (typeof options.recipe_types_matchall === "boolean") {
       params.append(
         "recipe_types_matchall",
@@ -159,15 +166,21 @@ export const searchRecipes = async (query, options = {}) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`❌ Recipe API error: ${response.status} - ${errorText}`);
+      console.error(
+        `FatSecret recipes API error: ${response.status} - ${errorText}`
+      );
+      throw new Error(
+        `FatSecret recipes API error: ${response.status} - ${errorText}`
+      );
     }
 
     const data = await response.json();
-    return {
-      recipes: data?.recipes?.recipe || [],
-    };
+    console.log("FatSecret API response for recipes.search:", data);
+
+    const recipesArray = data?.recipes?.recipe || [];
+    return { recipes: recipesArray };
   } catch (err) {
-    console.error("❌ Error searching recipes:", err.message);
+    console.error("Error searching FatSecret recipes:", err);
     throw err;
   }
 };
