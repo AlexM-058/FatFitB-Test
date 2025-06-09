@@ -44,29 +44,18 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 app.use(cookieParser());
 
 // Middleware pentru autentificare JWT
-const authenticateToken = (req, res, next) => {
-  // Acest middleware verifică prezența și validitatea token-ului JWT din cookie-uri.
-  // Dacă token-ul este valid, adaugă payload-ul decodat (informațiile utilizatorului)
-  // la `req.user` și permite cererii să continue.
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.split(" ")[1]; // Bearer token
 
-  // 1. Verifică dacă există un token în cookie-uri
-  if (!req.cookies || !req.cookies.token) {
-    return res.status(401).json({ error: "Nu a fost furnizat niciun token. Ești neautorizat." });
-  }
+  if (!token) return res.sendStatus(401);
 
-  const token = req.cookies.token;
-
-  // 2. Verifică și decodează token-ul
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      // Token invalid (falsificat) sau expirat
-      return res.status(403).json({ error: "Token invalid sau expirat. Acces interzis." });
-    }
-    // Token valid, adaugă payload-ul decodat la obiectul cererii
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403); // invalid token
     req.user = user;
-    next(); // Continuă spre handler-ul rutei
+    next();
   });
-};
+}
 
 // IMPORTANT: For production, change this to your specific frontend domain!
 app.use(
@@ -184,44 +173,9 @@ app.post("/login", async (req, res) => {
 });
 
 // Exemplu de rută protejată:
-app.get("/fatfit/:username", authenticateToken, async (req, res) => {
-  const { username } = req.params;
-
-  try {
-    const db = getDb();
-    const user = await db
-      .collection("userdata")
-      .findOne({ username }, { projection: { password: 0 } });
-
-    if (!user) return res.status(404).json({ message: "User not found." });
-
-    const latestAnswers = await getLatestAnswersForUser(username);
-
-    let processedAnswers = null;
-    let dailyCalorieTarget = null;
-
-    if (latestAnswers.length > 0) {
-      const ans = latestAnswers[0].answers;
-      processedAnswers = {
-        age: parseInt(ans["1.What is your age?"], 10),
-        gender: ans["2.What is your gender?"].toLowerCase(),
-        weight: parseFloat(ans["3.What is your current weight?"]),
-        height: parseFloat(ans["4.What is your height?"]),
-        goal: convertGoal(ans["5.What is your primary goal?"]),
-      };
-      dailyCalorieTarget = calculateCalories(processedAnswers);
-    }
-
-    res.status(200).json({
-      user,
-      extractedUserAnswers: processedAnswers,
-      dailyCalorieTarget,
-      message: `Welcome to your personalized FatFit page, ${username}!`,
-    });
-  } catch (err) {
-    console.error("Error accessing fatfit page:", err);
-    res.status(500).json({ message: "Server error." });
-  }
+app.get("/fatfit/:username", authMiddleware, (req, res) => {
+  // req.user conține userul din token
+  res.json({ data: "Protected content" });
 });
 
 // Search foods via FatSecret API
@@ -384,9 +338,9 @@ app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
             dietary_preferences = [ans["6.What are your dietary preferences?"]];
         }
                 if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
-            food_intolerances = ans["7.Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
-        } else if (typeof ans["7.Do you have any food intolerances or allergies?"] === "string" && ans["7.Do you have any food intolerances or allergies?"] !== "None") {
-            food_intolerances = [ans["7.Do you have any food intolerances or allergies?"]];
+            food_intolerances = ans["7.Do you have any food intolerances sau allergies?"].filter(opt => opt !== "None");
+        } else if (typeof ans["7.Do you have any food intolerances sau allergies?"] === "string" && ans["7.Do you have any food intolerances sau allergies?"] !== "None") {
+            food_intolerances = [ans["7.Do you have any food intolerances sau allergies?"]];
         }
 
         // You can set a default duration_weeks or extract from another answer if you add it to the quiz
