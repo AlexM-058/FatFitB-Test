@@ -37,6 +37,14 @@ const quiz = JSON.parse(raw);
 const client = initializeMongoClient(process.env.MONGO_URI);
 connectToDatabase();
 
+// Asigură-te că JWT_SECRET este definit înainte de folosirea lui în authenticateJWT
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_for_localhost";
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET is not set in environment variables. Set it in your .env file!");
+  process.exit(1);
+}
+
+// Middleware pentru protecție JWT
 function authenticateJWT(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: "No token provided." });
@@ -49,6 +57,7 @@ function authenticateJWT(req, res, next) {
     return res.status(403).json({ error: "Invalid or expired token." });
   }
 }
+
 // IMPORTANT: For production, change this to your specific frontend domain!
 app.use(
   cors({
@@ -69,13 +78,6 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-
-// Use JWT_SECRET from environment, fallback to a default for localhost/dev
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_for_localhost";
-if (!JWT_SECRET) {
-  console.error("FATAL: JWT_SECRET is not set in environment variables. Set it in your .env file!");
-  process.exit(1);
-}
 
 // Health check
 app.get("/", (req, res) => {
@@ -172,12 +174,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Middleware pentru protecție JWT
-
 // Exemplu de rută protejată:
-
-// Poți proteja orice altă rută la fel:
-app.get("/fatfit/:username", async (req, res) => {
+app.get("/fatfit/:username", authenticateJWT, async (req, res) => {
   const { username } = req.params;
 
   try {
