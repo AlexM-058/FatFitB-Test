@@ -116,7 +116,7 @@ app.post("/register", async (req, res) => {
 
     // Save user with hashed password in the correct collection
     const db = getDb();
-    await db.collection("users").insertOne({
+    await db.collection("usersdata").insertOne({
       fullname,
       username,
       email,
