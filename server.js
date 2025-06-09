@@ -177,7 +177,7 @@ app.post("/login", async (req, res) => {
 // Exemplu de rută protejată:
 
 // Poți proteja orice altă rută la fel:
-app.get("/fatfit/:username", authenticateJWT, async (req, res) => {
+app.get("/fatfit/:username", async (req, res) => {
   const { username } = req.params;
 
   try {
