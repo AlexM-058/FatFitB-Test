@@ -37,26 +37,36 @@ const quiz = JSON.parse(raw);
 const client = initializeMongoClient(process.env.MONGO_URI);
 connectToDatabase();
 
-// Asigură-te că JWT_SECRET este definit înainte de folosirea lui în authenticateJWT
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_for_localhost";
-if (!JWT_SECRET) {
-  console.error("FATAL: JWT_SECRET is not set in environment variables. Set it in your .env file!");
-  process.exit(1);
-}
+// Variabila pentru secretul JWT - CRUCIAL să fie o cheie puternică și stocată în .env
+const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
-// Middleware pentru protecție JWT
-function authenticateJWT(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: "No token provided." });
+// Middleware pentru a parsa cookie-urile din cerere
+app.use(cookieParser());
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: "Invalid or expired token." });
+// Middleware pentru autentificare JWT
+const authenticateToken = (req, res, next) => {
+  // Acest middleware verifică prezența și validitatea token-ului JWT din cookie-uri.
+  // Dacă token-ul este valid, adaugă payload-ul decodat (informațiile utilizatorului)
+  // la `req.user` și permite cererii să continue.
+
+  // 1. Verifică dacă există un token în cookie-uri
+  if (!req.cookies || !req.cookies.token) {
+    return res.status(401).json({ error: "Nu a fost furnizat niciun token. Ești neautorizat." });
   }
-}
+
+  const token = req.cookies.token;
+
+  // 2. Verifică și decodează token-ul
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      // Token invalid (falsificat) sau expirat
+      return res.status(403).json({ error: "Token invalid sau expirat. Acces interzis." });
+    }
+    // Token valid, adaugă payload-ul decodat la obiectul cererii
+    req.user = user;
+    next(); // Continuă spre handler-ul rutei
+  });
+};
 
 // IMPORTANT: For production, change this to your specific frontend domain!
 app.use(
@@ -77,7 +87,6 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(cookieParser());
 
 // Health check
 app.get("/", (req, res) => {
@@ -175,7 +184,7 @@ app.post("/login", async (req, res) => {
 });
 
 // Exemplu de rută protejată:
-app.get("/fatfit/:username", authenticateJWT, async (req, res) => {
+app.get("/fatfit/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
 
   try {
