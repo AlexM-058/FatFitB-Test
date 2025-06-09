@@ -10,7 +10,6 @@
     { "question": "9.How long is a typical workout session for you?", "type": "radio", "options": ["15–30 minutes", "30–45 minutes", "45–60 minutes", "60+ minutes"] },
     { "question": "10.Which types of workouts do you enjoy/prefer?", "type": "checkbox", "options": ["Strength training / Weightlifting", "Cardio (running, biking)", "HIIT (High-Intensity Interval Training)", "Yoga / Mobility", "Pilates / Stretching"] },
     { "question": "11.Do you have any injuries or medical conditions we should know about?", "type": "radio", "options": ["Yes", "No"] },
-    { "question": "12.If yes, please describe briefly", "type": "text", "conditionalOn": { "question": "Do you have any injuries or medical conditions we should know about?", "value": "Yes" } },
-    { "question": "13.Do you follow any specific dietary preferences or have allergies?", "type": "checkbox", "options": ["None", "Vegetarian", "Vegan", "Gluten-free", "Lactose intolerant", "Other (please specify)"] },
-    { "question": "14.How many meals/snacks do you eat per day?", "type": "radio", "options": ["3", "4–5", "6 or more"] }
+    { "question": "12.If yes, please describe briefly,If no, please write \"none \"", "type": "text", "conditionalOn": { "question": "Do you have any injuries or medical conditions we should know about?", "value": "Yes" } },
+    { "question": "13.How many meals/snacks do you eat per day?", "type": "radio", "options": ["3", "4–5", "6 or more"] }
   ]

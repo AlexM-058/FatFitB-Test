@@ -37,6 +37,18 @@ const quiz = JSON.parse(raw);
 const client = initializeMongoClient(process.env.MONGO_URI);
 connectToDatabase();
 
+function authenticateJWT(req, res, next) {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ error: "No token provided." });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid or expired token." });
+  }
+}
 // IMPORTANT: For production, change this to your specific frontend domain!
 app.use(
   cors({
@@ -130,76 +142,42 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ✅ Login endpoint using findUserByUsername
+// Login endpoint - setează JWT ca httpOnly cookie
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res
-      .status(400)
-      .json({ message: "Username and password are required." });
+    return res.status(400).json({ message: "Username and password are required." });
   }
   try {
-    // Folosește funcția utilitară pentru a găsi userul
     const TheUser = await findUserByUsername(username);
     if (!TheUser) {
-      return res
-        .status(401)
-        .json({ message: "Incorrect username or password." });
+      return res.status(401).json({ message: "Incorrect username or password." });
     }
     const isMatch = await bcrypt.compare(password, TheUser.password);
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ message: "Incorrect username or password." });
+      return res.status(401).json({ message: "Incorrect username or password." });
     }
-    return res
-      .status(200)
-      .json({ success: true, message: "Login successful!" });
+    // Generează token JWT
+    const token = jwt.sign({ username: TheUser.username, id: TheUser._id }, JWT_SECRET, { expiresIn: "1d" });
+    // Setează tokenul ca httpOnly cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production"
+    });
+    return res.status(200).json({ success: true, message: "Login successful!" });
   } catch (err) {
     console.error("❌ Login error:", err);
     return res.status(500).json({ message: "Server error during login." });
   }
 });
 
-// Middleware to verify JWT (use for protected routes)
-function authenticateJWT(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: "No token provided." });
+// Middleware pentru protecție JWT
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: "Invalid or expired token." });
-  }
-}
+// Exemplu de rută protejată:
 
-// Save quiz answers
-app.post("/answers", async (req, res) => {
-  const { username, answers } = req.body;
-
-  if (!username || !answers || typeof answers !== "object") {
-    return res.status(400).json({
-      success: false,
-      message: "Username or answers are missing or invalid.",
-    });
-  }
-
-  try {
-    await saveAnswers(username, answers);
-    res.status(201).json({
-      success: true,
-      message: "Answers saved successfully!",
-    });
-  } catch (err) {
-    console.error("Error saving answers:", err);
-    res.status(500).json({ success: false, message: "Server error." });
-  }
-});
-
-// Personalized FatFit page
-app.get("/fatfit/:username", async (req, res) => {
+// Poți proteja orice altă rută la fel:
+app.get("/fatfit/:username", authenticateJWT, async (req, res) => {
   const { username } = req.params;
 
   try {
@@ -494,7 +472,7 @@ app.post('/api/fitness-tribe/workout/:username', async (req, res) => {
           weight: parseFloat(ans["3.What is your current weight?"]),
           height: parseFloat(ans["4.What is your height?"]),
           age: parseInt(ans["1.What is your age?"], 10),
-          sex: ans["2.What is your gender?"]?.toLowerCase(),
+          sex: ans["2.What is yourgender?"]?.toLowerCase(),
           goal: convertGoal(ans["5.What is your primary goal?"]),
           workouts_per_week
         };
@@ -849,6 +827,30 @@ app.post("/api/recipes-calories/:username", async (req, res) => {
   } catch (err) {
     console.error("Error saving recipe food entries:", err);
     res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+// Reset password
+app.patch("/reset-password", async (req, res) => {
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: "Email and newPassword are required." });
+  }
+  try {
+    const db = getDb();
+    const user = await db.collection("userdata").findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User with this email not found." });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.collection("userdata").updateOne(
+      { email },
+      { $set: { password: hashedPassword } }
+    );
+    res.json({ success: true, message: "Password reset successfully." });
+  } catch (err) {
+    console.error("Error resetting password:", err);
+    res.status(500).json({ message: "Server error." });
   }
 });
 
