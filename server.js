@@ -69,6 +69,7 @@ app.get("/quiz", (req, res) => {
 });
 
 // Check if user exists by username or email
+
 app.post("/check-user", async (req, res) => {
   const { username, email } = req.body;
 
@@ -88,7 +89,7 @@ app.post("/check-user", async (req, res) => {
   }
 });
 
-// Register a new user
+// Register endpoint - saves user in the correct collection
 app.post("/register", async (req, res) => {
   try {
     const { fullname, username, email, password } = req.body;
@@ -163,7 +164,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
+// FatFit page for a specific user
 app.get("/fatfit/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
 
@@ -205,7 +206,7 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
 });
 
 // Search foods via FatSecret API
-app.get("/fatsecret-search", async (req, res) => {
+app.get("/fatsecret-search", authenticateToken, async (req, res) => {
   const query = req.query.q;
   if (!query) return res.status(400).json({ error: "Missing search query" });
 
@@ -219,7 +220,7 @@ app.get("/fatsecret-search", async (req, res) => {
     });
   }
 });
-
+//Show top 20 recipes from FatSecret API
 app.get("/recipes/search", async (req, res) => {
   try {
     const options = {
@@ -431,7 +432,6 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
             if (!isNaN(parsed) && parsed >= 2 && parsed <= 7) {
                 workouts_per_week = parsed;
             } else {
-                // fallback mapping for text answers
                 const workoutMap = {
                     "2 days": 2,
                     "3 days": 3,
@@ -448,7 +448,7 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
           weight: parseFloat(ans["3.What is your current weight?"]),
           height: parseFloat(ans["4.What is your height?"]),
           age: parseInt(ans["1.What is your age?"], 10),
-          sex: ans["2.What is your gender?"]?.toLowerCase(), // <-- fix aici
+          sex: ans["2.What is your gender?"]?.toLowerCase(),
           goal: convertGoal(ans["5.What is your primary goal?"]),
           workouts_per_week
         };
@@ -467,15 +467,19 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${API_KEY}`
-                    }
+                    },
+                    timeout: 15000 // 15 sec timeout pentru a evita 503 pe requesturi lungi
                 }
             );
             res.json(response.data);
         } catch (apiError) {
+            // Dacă Fitness Tribe API nu răspunde sau dă 5xx, trimite mesaj clar
             if (apiError.response) {
                 res.status(apiError.response.status).json({ error: apiError.response.data });
+            } else if (apiError.code === 'ECONNABORTED') {
+                res.status(504).json({ error: "Fitness Tribe API timeout. Please try again later." });
             } else {
-                res.status(500).json({ error: "Error contacting Fitness Tribe API." });
+                res.status(503).json({ error: "Fitness Tribe API unavailable. Please try again later." });
             }
         }
     } catch (error) {
@@ -805,7 +809,7 @@ app.post("/api/recipes-calories/:username", authenticateToken, async (req, res) 
 });
 
 // Reset password
-app.patch("/reset-password", async (req, res) => {
+app.patch("/reset-password", authenticateToken, async (req, res) => {
   const { email, newPassword } = req.body;
   if (!email || !newPassword) {
     return res.status(400).json({ message: "Email and newPassword are required." });
