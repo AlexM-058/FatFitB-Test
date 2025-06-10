@@ -43,18 +43,19 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 app.use(cookieParser());
 
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://fatfit.onrender.com",
-      "https://fatfitb-test.onrender.com" // adaugă și acest origin dacă frontendul sau backendul rulează aici!
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
+
+// Asigură-te că toate rutele răspund cu headerul CORS, inclusiv la OPTIONS
+app.options("*", cors({
+  origin: [
+    "http://localhost:5173",
+    "https://fatfit.onrender.com",
+    "https://fatfitb-test.onrender.com"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 app.use(express.json());
 
