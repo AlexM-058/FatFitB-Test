@@ -47,8 +47,7 @@ app.use(cors({
     "http://localhost:5173",
     "https://fatfit.onrender.com",
     "https://fatfitb-test.onrender.com",
-    // Adaugă aici IP-ul local sau domeniul frontendului dacă accesezi din rețea locală sau de pe telefon
-    // Exemplu: "http://192.168.1.100:5173"
+    
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -905,6 +904,16 @@ app.patch("/reset-password", async (req, res) => {
     console.error("Error resetting password:", err);
     res.status(500).json({ message: "Server error." });
   }
+});
+
+// All API and JWT-protected routes above this line
+
+// Fallback route for SPA (serves index.html for any unmatched GET route, no auth)
+import path from "path";
+const __dirname = path.resolve();
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.listen(PORT, () => {

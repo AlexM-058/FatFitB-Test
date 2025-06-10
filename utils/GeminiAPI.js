@@ -11,22 +11,18 @@ const fitnessApiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    // Asigură-te că antetul de autorizare este corect.
-    // README-ul menționează "GEMINI_API_KEY", deci ar putea fi o cheie directă de la Gemini, nu o cheie specifică pentru API-ul tău deploy-at.
-    // Dacă API-ul tău Python necesită autentificare "Bearer", atunci e corect așa.
-    // Dacă nu, s-ar putea să nu fie necesar antetul 'Authorization' deloc, sau să fie 'x-api-key'.
-    // Verifică documentația API-ului Python sau log-urile sale!
+    
     Authorization: `Bearer ${API_KEY}`,
   },
 });
 
 /**
- * Generează rețete personalizate folosind Fitness Tribe AI API.
- * @param {object} userData - Obiect conținând sex, înălțime, greutate, obiectiv și vârstă.
- * @returns {Promise<object|null>} Un obiect conținând rețetele sau null în caz de eroare.
+ * 
+ * @param {object} userData 
+ * @returns {Promise<object|null>} 
  */
 async function generateRecipes(userData) {
-  const endpoint = "/nutrition-plans/generate"; // ATENȚIE: Am corectat endpoint-ul conform postman_collection.json și README.md
+  const endpoint = "/nutrition-plans/generate"; 
 
   if (!API_KEY) {
     console.error(
