@@ -868,6 +868,30 @@ app.delete("/food/:username/:mealType", async (req, res) => {
   }
 });
 
+// Save quiz answers for a user
+app.post("/answers/:username", async (req, res) => {
+  const { username } = req.params;
+  const { answers } = req.body;
+
+  if (!username || !answers || typeof answers !== "object") {
+    return res.status(400).json({ message: "Username and answers are required." });
+  }
+
+  try {
+    const db = getDb();
+    // Save the answers with a timestamp for history
+    await db.collection("answers").insertOne({
+      username,
+      answers,
+      createdAt: new Date()
+    });
+    res.status(201).json({ message: "Answers saved successfully!" });
+  } catch (err) {
+    console.error("Error saving answers:", err);
+    res.status(500).json({ message: "Server error saving answers." });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
