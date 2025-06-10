@@ -42,11 +42,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
 app.use(cookieParser());
 
-
-
-
-// Asigură-te că toate rutele răspund cu headerul CORS, inclusiv la OPTIONS
-app.options("*", cors({
+app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://fatfit.onrender.com",
@@ -57,6 +53,10 @@ app.options("*", cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// Dacă vrei să răspunzi și la OPTIONS, poți păstra:
+app.options("*", cors());
+
+// Parse JSON bodies
 app.use(express.json());
 
 // Health check
