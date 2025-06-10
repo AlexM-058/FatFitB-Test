@@ -47,7 +47,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://fatfit.onrender.com"
+      "https://fatfit.onrender.com",
+      "https://fatfitb-test.onrender.com" // adaugă și acest origin dacă frontendul sau backendul rulează aici!
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
