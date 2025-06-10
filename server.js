@@ -46,13 +46,14 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://fatfit.onrender.com",
-    "https://fatfitb-test.onrender.com"
+    "https://fatfitb-test.onrender.com",
+    // Adaugă aici IP-ul local sau domeniul frontendului dacă accesezi din rețea locală sau de pe telefon
+    // Exemplu: "http://192.168.1.100:5173"
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-
 
 // Parse JSON bodies
 app.use(express.json());
@@ -265,34 +266,23 @@ app.get("/api/recipes/search", async (req, res) => {
 });
 
 // Update username
-app.put("/user/:username", async (req, res) => {
+app.put("/user/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
   const { newUsername } = req.body;
-
   if (!newUsername || typeof newUsername !== "string" || !newUsername.trim()) {
     return res.status(400).json({ message: "New username is required." });
   }
-
   try {
     const db = getDb();
-    // Check if new username already exists
-    const existing = await db
-      .collection("userdata")
-      .findOne({ username: newUsername });
+    const existing = await db.collection("userdata").findOne({ username: newUsername });
     if (existing) {
       return res.status(400).json({ message: "Username already taken." });
     }
-    // Update username in userdata
-    const result = await db
-      .collection("userdata")
-      .updateOne({ username }, { $set: { username: newUsername } });
+    const result = await db.collection("userdata").updateOne({ username }, { $set: { username: newUsername } });
     if (result.matchedCount === 0) {
       return res.status(404).json({ message: "User not found." });
     }
-    // Update username in answers (if you store answers by username)
-    await db
-      .collection("answers")
-      .updateMany({ username }, { $set: { username: newUsername } });
+    await db.collection("answers").updateMany({ username }, { $set: { username: newUsername } });
     res.json({ message: "Username updated successfully." });
   } catch (err) {
     console.error("Error updating username:", err);
@@ -301,13 +291,11 @@ app.put("/user/:username", async (req, res) => {
 });
 
 // Delete user account
-app.delete("/user/:username", async (req, res) => {
+app.delete("/user/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
   try {
     const db = getDb();
-    // Delete user from userdata
     const result = await db.collection("userdata").deleteOne({ username });
-    // Delete user's answers (optional)
     await db.collection("answers").deleteMany({ username });
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: "User not found." });
@@ -320,7 +308,7 @@ app.delete("/user/:username", async (req, res) => {
 });
 
 // Generate recipes for a specific user using Fitness Tribe AI API
-app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
+app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, res) => {
     const { username } = req.params;
     if (!username || username === "undefined" || username === "null" || username.trim() === "") {
         return res.status(400).json({ error: "Username is required in the URL." });
@@ -411,7 +399,7 @@ app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
 });
 
 // Generate workout plan for a specific user using Fitness Tribe AI API
-app.post('/api/fitness-tribe/workout/:username', async (req, res) => {
+app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, res) => {
     const { username } = req.params;
     if (!username || username === "undefined" || username === "null" || username.trim() === "") {
         return res.status(400).json({ error: "Username is required in the URL." });
@@ -500,7 +488,7 @@ app.post('/api/fitness-tribe/workout/:username', async (req, res) => {
 
 
 // Add calories entry and save in cookie for 24h (midnight to midnight)
-app.post("/api/calories/:username", async (req, res) => {
+app.post("/api/calories/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
   const { foods, mealType } = req.body;
 
@@ -563,7 +551,7 @@ app.post("/api/calories/:username", async (req, res) => {
 
 // Get all calories entries (prefer cookie if present)
 
-app.get("/caloriecounter/:username/lunch", async (req, res) => {
+app.get("/caloriecounter/:username/lunch", authenticateToken, async (req, res) => {
   const username = req.params.username;
 
   if (!username) {
@@ -604,7 +592,7 @@ app.get("/caloriecounter/:username/lunch", async (req, res) => {
 });
 
 // Add endpoint for breakfast
-app.get("/caloriecounter/:username/breakfast", async (req, res) => {
+app.get("/caloriecounter/:username/breakfast", authenticateToken, async (req, res) => {
   const username = req.params.username;
 
   if (!username) {
@@ -640,7 +628,7 @@ app.get("/caloriecounter/:username/breakfast", async (req, res) => {
 });
 
 // Add endpoint for dinner
-app.get("/caloriecounter/:username/dinner", async (req, res) => {
+app.get("/caloriecounter/:username/dinner", authenticateToken, async (req, res) => {
   const username = req.params.username;
 
   if (!username) {
@@ -676,7 +664,7 @@ app.get("/caloriecounter/:username/dinner", async (req, res) => {
 });
 
 // Add endpoint for snacks
-app.get("/caloriecounter/:username/snacks", async (req, res) => {
+app.get("/caloriecounter/:username/snacks", authenticateToken, async (req, res) => {
   const username = req.params.username;
 
   if (!username) {
@@ -711,7 +699,7 @@ app.get("/caloriecounter/:username/snacks", async (req, res) => {
   }
 });
 
-app.get("/caloriecounter/:username/total", async (req, res) => {
+app.get("/caloriecounter/:username/total", authenticateToken, async (req, res) => {
   const { username } = req.params;
   if (!username) {
     return res.status(400).json({ error: "Username is required in URL path" });
@@ -727,7 +715,7 @@ app.get("/caloriecounter/:username/total", async (req, res) => {
 });
 
 // PUT total calories for a user (create or update)
-app.put("/caloriecounter/:username/total", async (req, res) => {
+app.put("/caloriecounter/:username/total", authenticateToken, async (req, res) => {
   const { username } = req.params;
   const { totalCalories } = req.body;
   if (!username || typeof totalCalories !== "number") {
@@ -759,7 +747,7 @@ schedule.scheduleJob('1 0 * * *', async function () {
 });
 
 // Add calories entry for recipes (only requires name, calories, mealType)
-app.post("/api/recipes-calories/:username", async (req, res) => {
+app.post("/api/recipes-calories/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
   const { foods, mealType } = req.body;
 
@@ -841,7 +829,7 @@ app.patch("/reset-password", async (req, res) => {
 });
 
 // Delete a food item from foods array for a user and mealType (no date filter)
-app.delete("/food/:username/:mealType", async (req, res) => {
+app.delete("/food/:username/:mealType", authenticateToken, async (req, res) => {
   const { username, mealType } = req.params;
   const { foodName } = req.body;
 
@@ -869,7 +857,7 @@ app.delete("/food/:username/:mealType", async (req, res) => {
 });
 
 // Save quiz answers for a user (endpoint for quiz submission)
-app.post("/answers", async (req, res) => {
+app.post("/answers", authenticateToken, async (req, res) => {
   const { username, answers } = req.body;
 
   if (!username || !answers || typeof answers !== "object") {
@@ -888,6 +876,30 @@ app.post("/answers", async (req, res) => {
   } catch (err) {
     console.error("Error saving answers:", err);
     res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+// Reset password (nu are username în URL, deci nu e nevoie de auth)
+app.patch("/reset-password", async (req, res) => {
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: "Email and newPassword are required." });
+  }
+  try {
+    const db = getDb();
+    const user = await db.collection("userdata").findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User with this email not found." });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.collection("userdata").updateOne(
+      { email },
+      { $set: { password: hashedPassword } }
+    );
+    res.json({ success: true, message: "Password reset successfully." });
+  } catch (err) {
+    console.error("Error resetting password:", err);
+    res.status(500).json({ message: "Server error." });
   }
 });
 
