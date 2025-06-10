@@ -53,10 +53,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Înlocuiește linia aceasta:
-// app.options("*", cors());
-// cu:
-app.options("*", cors());
 
 // Parse JSON bodies
 app.use(express.json());
@@ -369,8 +365,8 @@ app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
         // FIX: folosește "or" nu "sau"
         if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
             food_intolerances = ans["7.Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
-        } else if (typeof ans["7.Do you have any food intolerances sau allergies?"] === "string" && ans["7.Do you have any food intolerances sau allergies?"] !== "None") {
-            food_intolerances = [ans["7.Do you have any food intolerances sau allergies?"]];
+        } else if (typeof ans["7.Do you have any food intolerances or allergies?"] === "string" && ans["7.Do you have any food intolerances or allergies?"] !== "None") {
+            food_intolerances = [ans["7.Do you have any food intolerances or allergies?"]];
         }
 
         // You can set a default duration_weeks or extract from another answer if you add it to the quiz
