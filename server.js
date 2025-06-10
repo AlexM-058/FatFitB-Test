@@ -43,16 +43,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 app.use(cookieParser());
 
 
-app.get("/auth/validate", authenticateToken, (req, res) => {
-  return res.status(200).json({ valid: true, username: req.user.username });
-});
-
-
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://fatfitb-test.onrender.com",
       "https://fatfit.onrender.com"
     ],
     credentials: true,
@@ -60,6 +54,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(express.json());
 
 // Health check
@@ -142,26 +137,22 @@ app.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Incorrect username or password." });
     }
-    // Generate JWT token with all required fields for frontend validation
+    // Generate JWT token
     const token = jwt.sign(
       {
         username: TheUser.username,
         id: TheUser._id,
         rights: TheUser.rights || 0,
         iss: "FatFit"
-        // Do NOT add iat manually, let jwt.sign add it automatically!
       },
       JWT_SECRET,
       { expiresIn: "1d" }
     );
-    // Debug: log the token for troubleshooting
-    console.log("JWT token after login:", token);
-
-    // Set token as httpOnly cookie
+    // Set token as httpOnly cookie, allow cross-origin with credentials
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production"
+      sameSite: "none", // important for cross-origin cookies!
+      secure: true      // must be true for sameSite: 'none'
     });
     // Return token in response for frontend (for setToken in AuthService/jwt.js)
     return res.status(200).json({ success: true, message: "Login successful!", token });
