@@ -43,15 +43,14 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 // Middleware pentru a parsa cookie-urile din cerere
 app.use(cookieParser());
 
-// Middleware pentru autentificare JWT
-function authMiddleware(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader?.split(" ")[1]; // Bearer token
-
-  if (!token) return res.sendStatus(401);
-
+// Middleware pentru autentificare JWT pe bază de cookie
+function authenticateToken(req, res, next) {
+  if (!req.cookies || !req.cookies.token) {
+    return res.status(401).json({ error: "JWT cookie missing or invalid." });
+  }
+  const token = req.cookies.token;
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403); // invalid token
+    if (err) return res.status(403).json({ error: "Token invalid sau expirat." });
     req.user = user;
     next();
   });
@@ -173,9 +172,44 @@ app.post("/login", async (req, res) => {
 });
 
 // Exemplu de rută protejată:
-app.get("/fatfit/:username", authMiddleware, (req, res) => {
-  // req.user conține userul din token
-  res.json({ data: "Protected content" });
+app.get("/fatfit/:username", authenticateToken, async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const db = getDb();
+    const user = await db
+      .collection("userdata")
+      .findOne({ username }, { projection: { password: 0 } });
+
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const latestAnswers = await getLatestAnswersForUser(username);
+
+    let processedAnswers = null;
+    let dailyCalorieTarget = null;
+
+    if (latestAnswers.length > 0) {
+      const ans = latestAnswers[0].answers;
+      processedAnswers = {
+        age: parseInt(ans["1.What is your age?"], 10),
+        gender: ans["2.What is your gender?"].toLowerCase(),
+        weight: parseFloat(ans["3.What is your current weight?"]),
+        height: parseFloat(ans["4.What is your height?"]),
+        goal: convertGoal(ans["5.What is your primary goal?"]),
+      };
+      dailyCalorieTarget = calculateCalories(processedAnswers);
+    }
+
+    res.status(200).json({
+      user,
+      extractedUserAnswers: processedAnswers,
+      dailyCalorieTarget,
+      message: `Welcome to your personalized FatFit page, ${username}!`,
+    });
+  } catch (err) {
+    console.error("Error accessing fatfit page:", err);
+    res.status(500).json({ message: "Server error." });
+  }
 });
 
 // Search foods via FatSecret API
@@ -329,16 +363,17 @@ app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
 
         const ans = latestAnswers[0].answers;
 
-               let dietary_preferences = [];
+        let dietary_preferences = [];
         let food_intolerances = [];
 
-              if (Array.isArray(ans["6.What are your dietary preferences?"])) {
+        if (Array.isArray(ans["6.What are your dietary preferences?"])) {
             dietary_preferences = ans["6.What are your dietary preferences?"].filter(opt => opt !== "None");
         } else if (typeof ans["6.What are your dietary preferences?"] === "string" && ans["6.What are your dietary preferences?"] !== "None") {
             dietary_preferences = [ans["6.What are your dietary preferences?"]];
         }
-                if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
-            food_intolerances = ans["7.Do you have any food intolerances sau allergies?"].filter(opt => opt !== "None");
+        // FIX: folosește "or" nu "sau"
+        if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
+            food_intolerances = ans["7.Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
         } else if (typeof ans["7.Do you have any food intolerances sau allergies?"] === "string" && ans["7.Do you have any food intolerances sau allergies?"] !== "None") {
             food_intolerances = [ans["7.Do you have any food intolerances sau allergies?"]];
         }
@@ -361,6 +396,7 @@ app.post('/api/fitness-tribe/recipes/:username', async (req, res) => {
         console.log("generateRecipes response:", recipes);
 
         if (!recipes) {
+            console.log("generateRecipes returned nothing for user:", username, "userData:", userData);
             return res.status(502).json({ error: 'No response from Fitness Tribe API. Please try again later.' });
         }
         if (recipes.detail) {
@@ -433,7 +469,7 @@ app.post('/api/fitness-tribe/workout/:username', async (req, res) => {
           weight: parseFloat(ans["3.What is your current weight?"]),
           height: parseFloat(ans["4.What is your height?"]),
           age: parseInt(ans["1.What is your age?"], 10),
-          sex: ans["2.What is yourgender?"]?.toLowerCase(),
+          sex: ans["2.What is your gender?"]?.toLowerCase(), // <-- fix aici
           goal: convertGoal(ans["5.What is your primary goal?"]),
           workouts_per_week
         };
@@ -555,9 +591,7 @@ app.get("/caloriecounter/:username/lunch", async (req, res) => {
       })
       .toArray();
 
-    // DEBUG: Log what was found
-    console.log("lunchDocs found for", username, ":", JSON.stringify(lunchDocs, null, 2));
-
+   
     // Extrage toate obiectele individuale din array-ul foods (dacă există)
     let allFoods = [];
     if (lunchDocs.length > 0) {
@@ -812,6 +846,34 @@ app.patch("/reset-password", async (req, res) => {
   } catch (err) {
     console.error("Error resetting password:", err);
     res.status(500).json({ message: "Server error." });
+  }
+});
+
+// Delete a food item from foods array for a user and mealType (no date filter)
+app.delete("/food/:username/:mealType", async (req, res) => {
+  const { username, mealType } = req.params;
+  const { foodName } = req.body;
+
+  if (!username || !mealType || !foodName) {
+    return res.status(400).json({ error: "username, mealType, and foodName are required." });
+  }
+
+  try {
+    const db = getDb();
+    // Remove the food item with foodName from all foods arrays for the user and mealType (all dates)
+    const result = await db.collection("food").updateMany(
+      { username, mealType },
+      { $pull: { foods: { name: foodName } } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Food item not found for this user and mealType." });
+    }
+
+    res.json({ success: true, message: `Food item '${foodName}' was deleted from ${mealType} for ${username}.` });
+  } catch (err) {
+    console.error("Error deleting food item:", err);
+    res.status(500).json({ error: "Error deleting food item." });
   }
 });
 
