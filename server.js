@@ -27,6 +27,7 @@ import {
   searchRecipes,
 } from "./utils/fatsecretApi.js";
 import { generateRecipes } from "./utils/GeminiAPI.js";
+import { authenticateToken } from "./utils/AuthToken.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Use process.env.PORT for deploy
@@ -37,26 +38,16 @@ const quiz = JSON.parse(raw);
 const client = initializeMongoClient(process.env.MONGO_URI);
 connectToDatabase();
 
-// Variabila pentru secretul JWT - CRUCIAL să fie o cheie puternică și stocată în .env
 const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
-// Middleware pentru a parsa cookie-urile din cerere
 app.use(cookieParser());
 
-// Middleware pentru autentificare JWT pe bază de cookie
-function authenticateToken(req, res, next) {
-  if (!req.cookies || !req.cookies.token) {
-    return res.status(401).json({ error: "JWT cookie missing or invalid." });
-  }
-  const token = req.cookies.token;
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Token invalid sau expirat." });
-    req.user = user;
-    next();
-  });
-}
 
-// IMPORTANT: For production, change this to your specific frontend domain!
+app.get("/auth/validate", authenticateToken, (req, res) => {
+  return res.status(200).json({ valid: true, username: req.user.username });
+});
+
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -141,7 +132,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Login endpoint - setează JWT ca httpOnly cookie
+// Login endpoint - sets JWT as httpOnly cookie and returns it in the response for frontend
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
@@ -156,22 +147,36 @@ app.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Incorrect username or password." });
     }
-    // Generează token JWT
-    const token = jwt.sign({ username: TheUser.username, id: TheUser._id }, JWT_SECRET, { expiresIn: "1d" });
-    // Setează tokenul ca httpOnly cookie
+    // Generate JWT token with all required fields for frontend validation
+    const token = jwt.sign(
+      {
+        username: TheUser.username,
+        id: TheUser._id,
+        rights: TheUser.rights || 0,
+        iss: "FatFit"
+        // Do NOT add iat manually, let jwt.sign add it automatically!
+      },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    // Debug: log the token for troubleshooting
+    console.log("JWT token after login:", token);
+
+    // Set token as httpOnly cookie
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production"
     });
-    return res.status(200).json({ success: true, message: "Login successful!" });
+    // Return token in response for frontend (for setToken in AuthService/jwt.js)
+    return res.status(200).json({ success: true, message: "Login successful!", token });
   } catch (err) {
     console.error("❌ Login error:", err);
     return res.status(500).json({ message: "Server error during login." });
   }
 });
 
-// Exemplu de rută protejată:
+
 app.get("/fatfit/:username", authenticateToken, async (req, res) => {
   const { username } = req.params;
 

@@ -25,7 +25,8 @@
     "mongodb": "^6.16.0",
     "morgan": "^1.10.0",
     "node-fetch": "^3.3.2",
-    "node-schedule": "^2.1.1"
+    "node-schedule": "^2.1.1",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
