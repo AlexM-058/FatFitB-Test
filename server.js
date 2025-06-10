@@ -53,7 +53,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Dacă vrei să răspunzi și la OPTIONS, poți păstra:
+// Folosește doar app.options("*", cors()) fără configurație suplimentară aici!
 app.options("*", cors());
 
 // Parse JSON bodies
