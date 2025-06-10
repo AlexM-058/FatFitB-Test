@@ -873,20 +873,21 @@ app.post("/answers", async (req, res) => {
   const { username, answers } = req.body;
 
   if (!username || !answers || typeof answers !== "object") {
-    return res.status(400).json({ message: "Username and answers are required." });
+    return res.status(400).json({
+      success: false,
+      message: "Username or answers are missing or invalid.",
+    });
   }
 
   try {
-    const db = getDb();
-    await db.collection("answers").insertOne({
-      username,
-      answers,
-      createdAt: new Date()
+    await saveAnswers(username, answers);
+    res.status(201).json({
+      success: true,
+      message: "Answers saved successfully!",
     });
-    res.status(201).json({ message: "Answers saved successfully!" });
   } catch (err) {
     console.error("Error saving answers:", err);
-    res.status(500).json({ message: "Server error saving answers." });
+    res.status(500).json({ success: false, message: "Server error." });
   }
 });
 
