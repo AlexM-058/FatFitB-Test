@@ -893,16 +893,3 @@ app.post("/answers", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-
-# Instrucțiuni pentru git:
-# Pentru a adăuga toate modificările și a face commit corect, folosește:
-
-git add server.js
-git commit -m "JWT-4"
-
-# Dacă vrei să faci commit la toate fișierele modificate:
-git add .
-git commit -m "JWT-4"
-
-# Apoi poți face push:
-git push
