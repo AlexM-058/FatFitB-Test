@@ -864,7 +864,7 @@ app.delete("/food/:username/:mealType", authenticateToken, async (req, res) => {
 });
 
 // Save quiz answers for a user (endpoint for quiz submission)
-app.post("/answers", authenticateToken, async (req, res) => {
+app.post("/answers",  async (req, res) => {
   const { username, answers } = req.body;
 
   if (!username || !answers || typeof answers !== "object") {
