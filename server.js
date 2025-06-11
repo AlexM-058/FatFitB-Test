@@ -46,6 +46,7 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://fatfit.onrender.com",
+    "https://fatfit.netlify.app",
     "https://fatfitb-test.onrender.com",
     
   ],
