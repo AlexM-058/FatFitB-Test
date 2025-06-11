@@ -156,7 +156,7 @@ app.post("/login", async (req, res) => {
       sameSite: "none", // important for cross-origin cookies!
       secure: true      // must be true for sameSite: 'none'
     });
-    // Return token in response for frontend (for setToken in AuthService/jwt.js)
+   
     return res.status(200).json({ success: true, message: "Login successful!", token });
   } catch (err) {
     console.error("❌ Login error:", err);
@@ -174,18 +174,20 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
       .collection("userdata")
       .findOne({ username }, { projection: { password: 0 } });
 
-    if (!user) return res.status(404).json({ message: "User not found." });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
     const latestAnswers = await getLatestAnswersForUser(username);
 
     let processedAnswers = null;
     let dailyCalorieTarget = null;
 
-    if (latestAnswers.length > 0) {
+    if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
       const ans = latestAnswers[0].answers;
       processedAnswers = {
         age: parseInt(ans["1.What is your age?"], 10),
-        gender: ans["2.What is your gender?"].toLowerCase(),
+        gender: ans["2.What is your gender?"]?.toLowerCase(),
         weight: parseFloat(ans["3.What is your current weight?"]),
         height: parseFloat(ans["4.What is your height?"]),
         goal: convertGoal(ans["5.What is your primary goal?"]),
@@ -193,6 +195,7 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
       dailyCalorieTarget = calculateCalories(processedAnswers);
     }
 
+    // If no quiz answers, still return user and nulls
     res.status(200).json({
       user,
       extractedUserAnswers: processedAnswers,
@@ -200,7 +203,7 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
       message: `Welcome to your personalized FatFit page, ${username}!`,
     });
   } catch (err) {
-    console.error("Error accessing fatfit page:", err);
+    console.error("Error accessing fatfit page for user:", username, err);
     res.status(500).json({ message: "Server error." });
   }
 });
@@ -883,7 +886,7 @@ app.post("/answers", authenticateToken, async (req, res) => {
   }
 });
 
-// Reset password (nu are username în URL, deci nu e nevoie de auth)
+
 app.patch("/reset-password", async (req, res) => {
   const { email, newPassword } = req.body;
   if (!email || !newPassword) {

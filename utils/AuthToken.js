@@ -3,7 +3,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // Middleware pentru autentificare JWT din cookie SAU header Authorization
 export const authenticateToken = (req, res, next) => {
-  // Ia tokenul din cookie sau din headerul Authorization (Bearer <token>)
+  
   const token =
     req.cookies.token ||
     (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")
