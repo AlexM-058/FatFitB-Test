@@ -197,6 +197,10 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     try {
       latestAnswers = await getLatestAnswersForUser(username);
       console.log(`[FatFit] getLatestAnswersForUser result for ${username}:`, latestAnswers);
+      if (!latestAnswers || latestAnswers.length === 0) {
+        console.log(`[FatFit] No quiz answers found in DB for username: ${username}`);
+        return res.status(404).json({ message: "No answers found in the 'answers' collection for this user." });
+      }
       if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
         console.log(`[FatFit] Full answers for user ${username}:`, latestAnswers[0].answers);
       }
@@ -221,14 +225,13 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     }
 
     // If no quiz answers, still return user and nulls
-    const responseData = {
+    res.status(200).json({
       user,
       extractedUserAnswers: processedAnswers,
       dailyCalorieTarget,
       message: `Welcome to your personalized FatFit page, ${username}!`,
-    };
-    console.log("userData from backend:", responseData);
-    res.status(200).json(responseData);
+      latestAnswers
+    });
   } catch (err) {
     console.error("Error accessing fatfit page for user:", username, err);
     res.status(500).json({ message: "Server error." });
