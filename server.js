@@ -197,6 +197,9 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     try {
       latestAnswers = await getLatestAnswersForUser(username);
       console.log(`[FatFit] getLatestAnswersForUser result for ${username}:`, latestAnswers);
+      if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
+        console.log(`[FatFit] Full answers for user ${username}:`, latestAnswers[0].answers);
+      }
     } catch (dbErr) {
       console.error(`[FatFit] Error fetching answers for username: ${username}`, dbErr);
       return res.status(500).json({ message: "Error fetching quiz answers from database." });
