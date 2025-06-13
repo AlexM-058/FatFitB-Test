@@ -215,11 +215,11 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
       const ans = latestAnswers[0].answers;
       processedAnswers = {
-        age: parseInt(ans["1.What is your age?"], 10),
-        gender: ans["2.What is your gender?"]?.toLowerCase(),
-        weight: parseFloat(ans["3.What is your current weight?"]),
-        height: parseFloat(ans["4.What is your height?"]),
-        goal: convertGoal(ans["5.What is your primary goal?"]),
+        age: parseInt(ans["What is your age?"], 10),
+        gender: ans["What is your gender?"]?.toLowerCase(),
+        weight: parseFloat(ans["What is your current weight?"]),
+        height: parseFloat(ans["What is your height?"]),
+        goal: convertGoal(ans["What is your primary goal?"]),
       };
       dailyCalorieTarget = calculateCalories(processedAnswers);
     }
@@ -377,11 +377,11 @@ app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, 
         const ans = latestAnswers[0].answers;
 
         // Validate required fields
-        const weight = parseFloat(ans["3.What is your current weight?"]);
-        const height = parseFloat(ans["4.What is your height?"]);
-        const age = parseInt(ans["1.What is your age?"], 10);
-        const sex = ans["2.What is your gender?"]?.toLowerCase();
-        const goal = convertGoal(ans["5.What is your primary goal?"]);
+        const weight = parseFloat(ans["What is your current weight?"]);
+        const height = parseFloat(ans["What is your height?"]);
+        const age = parseInt(ans["What is your age?"], 10);
+        const sex = ans["What is your gender?"]?.toLowerCase();
+        const goal = convertGoal(ans["What is your primary goal?"]);
 
         if (
           isNaN(weight) ||
@@ -400,16 +400,16 @@ app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, 
         let dietary_preferences = [];
         let food_intolerances = [];
 
-        if (Array.isArray(ans["6.What are your dietary preferences?"])) {
-            dietary_preferences = ans["6.What are your dietary preferences?"].filter(opt => opt !== "None");
-        } else if (typeof ans["6.What are your dietary preferences?"] === "string" && ans["6.What are your dietary preferences?"] !== "None") {
-            dietary_preferences = [ans["6.What are your dietary preferences?"]];
+        if (Array.isArray(ans["What are your dietary preferences?"])) {
+            dietary_preferences = ans["What are your dietary preferences?"].filter(opt => opt !== "None");
+        } else if (typeof ans["What are your dietary preferences?"] === "string" && ans["What are your dietary preferences?"] !== "None") {
+            dietary_preferences = [ans["What are your dietary preferences?"]];
         }
         
-        if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
-            food_intolerances = ans["7.Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
-        } else if (typeof ans["7.Do you have any food intolerances or allergies?"] === "string" && ans["7.Do you have any food intolerances or allergies?"] !== "None") {
-            food_intolerances = [ans["7.Do you have any food intolerances or allergies?"]];
+        if (Array.isArray(ans["Do you have any food intolerances or allergies?"])) {
+            food_intolerances = ans["Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
+        } else if (typeof ans["Do you have any food intolerances or allergies?"] === "string" && ans["Do you have any food intolerances or allergies?"] !== "None") {
+            food_intolerances = [ans["Do you have any food intolerances or allergies?"]];
         }
 
         // You can set a default duration_weeks or extract from another answer if you add it to the quiz
@@ -490,11 +490,11 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
         const ans = latestAnswers.answers;
 
         // Validate required fields
-        const weight = parseFloat(ans["1.What is your current weight?"]) || parseFloat(ans["3.What is your current weight?"]);
-        const height = parseFloat(ans["4.What is your height?"]);
-        const age = parseInt(ans["1.What is your age?"], 10);
-        const sex = ans["2.What is your gender?"]?.toLowerCase();
-        const goal = convertGoal(ans["5.What is your primary goal?"]);
+        const weight = parseFloat(ans["What is your current weight?"]) || parseFloat(ans["What is your current weight?"]);
+        const height = parseFloat(ans["What is your height?"]);
+        const age = parseInt(ans["What is your age?"], 10);
+        const sex = ans["What is your gender?"]?.toLowerCase();
+        const goal = convertGoal(ans["What is your primary goal?"]);
 
         // Debug log for extracted values
         console.log(`[Workout] Extracted: weight=${weight}, height=${height}, age=${age}, sex=${sex}, goal=${goal}`);
@@ -515,8 +515,8 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
 
         // Extract workouts_per_week from quiz answers (example: question 8)
         let workouts_per_week = 3;
-        if (ans["8.How many days per week do you plan to work out?"]) {
-            const val = ans["8.How many days per week do you plan to work out?"];
+        if (ans["How many days per week do you plan to work out?"]) {
+            const val = ans["How many days per week do you plan to work out?"];
             let parsed = parseInt(val, 10);
             if (!isNaN(parsed) && parsed >= 2 && parsed <= 7) {
                 workouts_per_week = parsed;
