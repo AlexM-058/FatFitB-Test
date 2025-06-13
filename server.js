@@ -27,7 +27,19 @@ import {
   searchRecipes,
 } from "./utils/fatsecretApi.js";
 import { generateRecipes } from "./utils/GeminiAPI.js";
-import { authenticateToken } from "./utils/AuthToken.js";
+import { authenticateToken as originalAuthenticateToken } from "./utils/AuthToken.js";
+
+// Debug wrapper for authenticateToken
+function authenticateToken(req, res, next) {
+  // Log cookies for debugging
+  console.log("Auth middleware cookies:", req.cookies);
+  // Log Authorization header if present
+  if (req.headers.authorization) {
+    console.log("Auth middleware Authorization header:", req.headers.authorization);
+  }
+  // Call the original middleware
+  return originalAuthenticateToken(req, res, next);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Use process.env.PORT for deploy
