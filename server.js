@@ -200,6 +200,9 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
         .findOne({ username });
       if (!latestAnswers) {
         console.log(`[FatFit] No quiz answers found in DB for username: ${username}`);
+      } else {
+        // Log the entire answers object for debugging
+        console.log(`[FatFit] Full answers for user ${username}:`, latestAnswers.answers);
       }
     } catch (dbErr) {
       console.error(`[FatFit] Error fetching answers for username: ${username}`, dbErr);
@@ -401,7 +404,7 @@ app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, 
         } else if (typeof ans["6.What are your dietary preferences?"] === "string" && ans["6.What are your dietary preferences?"] !== "None") {
             dietary_preferences = [ans["6.What are your dietary preferences?"]];
         }
-        // FIX: folosește "or" nu "sau"
+        
         if (Array.isArray(ans["7.Do you have any food intolerances or allergies?"])) {
             food_intolerances = ans["7.Do you have any food intolerances or allergies?"].filter(opt => opt !== "None");
         } else if (typeof ans["7.Do you have any food intolerances or allergies?"] === "string" && ans["7.Do you have any food intolerances or allergies?"] !== "None") {
@@ -465,19 +468,35 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
             return res.status(404).json({ error: "User not found." });
         }
 
-        const latestAnswers = await getLatestAnswersForUser(username);
-        if (!latestAnswers || latestAnswers.length === 0) {
-            return res.status(404).json({ error: 'No quiz answers found for this user.' });
+        // Fetch the quiz answers for this user from the 'answers' collection (one per user)
+        let latestAnswers;
+        try {
+          latestAnswers = await db
+            .collection("answers")
+            .findOne({ username });
+          if (!latestAnswers) {
+            console.log(`[Workout] No quiz answers found in DB for username: ${username}`);
+          }
+        } catch (dbErr) {
+          console.error(`[Workout] Error fetching answers for username: ${username}`, dbErr);
+          return res.status(500).json({ error: "Error fetching quiz answers from database." });
         }
 
-        const ans = latestAnswers[0].answers;
+        if (!latestAnswers || !latestAnswers.answers) {
+          return res.status(404).json({ error: 'No quiz answers found for this user.' });
+        }
+
+        const ans = latestAnswers.answers;
 
         // Validate required fields
-        const weight = parseFloat(ans["3.What is your current weight?"]);
+        const weight = parseFloat(ans["1.What is your current weight?"]) || parseFloat(ans["3.What is your current weight?"]);
         const height = parseFloat(ans["4.What is your height?"]);
         const age = parseInt(ans["1.What is your age?"], 10);
         const sex = ans["2.What is your gender?"]?.toLowerCase();
         const goal = convertGoal(ans["5.What is your primary goal?"]);
+
+        // Debug log for extracted values
+        console.log(`[Workout] Extracted: weight=${weight}, height=${height}, age=${age}, sex=${sex}, goal=${goal}`);
 
         if (
           isNaN(weight) ||
@@ -495,10 +514,8 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
 
         // Extract workouts_per_week from quiz answers (example: question 8)
         let workouts_per_week = 3;
-        // Accept only values between 2 and 7
         if (ans["8.How many days per week do you plan to work out?"]) {
             const val = ans["8.How many days per week do you plan to work out?"];
-            // Try to parse as number, fallback to mapping
             let parsed = parseInt(val, 10);
             if (!isNaN(parsed) && parsed >= 2 && parsed <= 7) {
                 workouts_per_week = parsed;
@@ -544,7 +561,7 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
             );
             res.json(response.data);
         } catch (apiError) {
-            // Dacă Fitness Tribe API nu răspunde sau dă 5xx, trimite mesaj clar
+            
             if (apiError.response) {
                 res.status(apiError.response.status).json({ error: apiError.response.data });
             } else if (apiError.code === 'ECONNABORTED') {
