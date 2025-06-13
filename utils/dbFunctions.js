@@ -30,8 +30,6 @@ export const connectToDatabase = async () => {
     const collections = await db.listCollections().toArray();
     console.log("📁 Collections in 'Users' database:");
     collections.forEach((col) => console.log(` - ${col.name}`));
-
-
   } catch (err) {
     console.error("❌ Connection error:", err);
     // It's important to re-throw the error so the server knows the connection failed
@@ -75,7 +73,7 @@ export const saveAnswers = async (username, answers) => {
   await answersCollection.insertOne({
     username,
     answers,
-    submittedAt: new Date(),
+    // submittedAt: new Date(),
   });
 };
 
@@ -83,9 +81,11 @@ export const saveAnswers = async (username, answers) => {
 export const getLatestAnswersForUser = async (username) => {
   const db = getDb();
   const answersCollection = db.collection("answers");
-  return await answersCollection
+  const result = await answersCollection
     .find({ username })
-    .sort({ submittedAt: -1 })
+    // .sort({ submittedAt: -1 })
     .limit(1)
     .toArray();
+  console.log(`[getLatestAnswersForUser] Answers fetched for username "${username}":`, result);
+  return result;
 };
