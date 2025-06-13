@@ -192,18 +192,11 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    // Fetch the quiz answers for this user from the 'answers' collection (one per user)
+    // Use getLatestAnswersForUser to fetch the latest quiz answers
     let latestAnswers;
     try {
-      latestAnswers = await db
-        .collection("answers")
-        .findOne({ username });
-      if (!latestAnswers) {
-        console.log(`[FatFit] No quiz answers found in DB for username: ${username}`);
-      } else {
-        // Log the entire answers object for debugging
-        console.log(`[FatFit] Full answers for user ${username}:`, latestAnswers.answers);
-      }
+      latestAnswers = await getLatestAnswersForUser(username);
+      console.log(`[FatFit] getLatestAnswersForUser result for ${username}:`, latestAnswers);
     } catch (dbErr) {
       console.error(`[FatFit] Error fetching answers for username: ${username}`, dbErr);
       return res.status(500).json({ message: "Error fetching quiz answers from database." });
@@ -212,8 +205,8 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     let processedAnswers = null;
     let dailyCalorieTarget = null;
 
-    if (latestAnswers && latestAnswers.answers) {
-      const ans = latestAnswers.answers;
+    if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
+      const ans = latestAnswers[0].answers;
       processedAnswers = {
         age: parseInt(ans["1.What is your age?"], 10),
         gender: ans["2.What is your gender?"]?.toLowerCase(),
