@@ -221,12 +221,14 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
     }
 
     // If no quiz answers, still return user and nulls
-    res.status(200).json({
+    const responseData = {
       user,
       extractedUserAnswers: processedAnswers,
       dailyCalorieTarget,
       message: `Welcome to your personalized FatFit page, ${username}!`,
-    });
+    };
+    console.log("userData from backend:", responseData);
+    res.status(200).json(responseData);
   } catch (err) {
     console.error("Error accessing fatfit page for user:", username, err);
     res.status(500).json({ message: "Server error." });
