@@ -192,13 +192,25 @@ app.get("/fatfit/:username", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    const latestAnswers = await getLatestAnswersForUser(username);
+    // Fetch the quiz answers for this user from the 'answers' collection (one per user)
+    let latestAnswers;
+    try {
+      latestAnswers = await db
+        .collection("answers")
+        .findOne({ username });
+      if (!latestAnswers) {
+        console.log(`[FatFit] No quiz answers found in DB for username: ${username}`);
+      }
+    } catch (dbErr) {
+      console.error(`[FatFit] Error fetching answers for username: ${username}`, dbErr);
+      return res.status(500).json({ message: "Error fetching quiz answers from database." });
+    }
 
     let processedAnswers = null;
     let dailyCalorieTarget = null;
 
-    if (Array.isArray(latestAnswers) && latestAnswers.length > 0 && latestAnswers[0]?.answers) {
-      const ans = latestAnswers[0].answers;
+    if (latestAnswers && latestAnswers.answers) {
+      const ans = latestAnswers.answers;
       processedAnswers = {
         age: parseInt(ans["1.What is your age?"], 10),
         gender: ans["2.What is your gender?"]?.toLowerCase(),
@@ -360,6 +372,27 @@ app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, 
 
         const ans = latestAnswers[0].answers;
 
+        // Validate required fields
+        const weight = parseFloat(ans["3.What is your current weight?"]);
+        const height = parseFloat(ans["4.What is your height?"]);
+        const age = parseInt(ans["1.What is your age?"], 10);
+        const sex = ans["2.What is your gender?"]?.toLowerCase();
+        const goal = convertGoal(ans["5.What is your primary goal?"]);
+
+        if (
+          isNaN(weight) ||
+          isNaN(height) ||
+          isNaN(age) ||
+          !sex ||
+          typeof sex !== "string" ||
+          !goal ||
+          typeof goal !== "string"
+        ) {
+          return res.status(400).json({
+            error: "Missing or invalid quiz answers. Please complete the quiz with valid data."
+          });
+        }
+
         let dietary_preferences = [];
         let food_intolerances = [];
 
@@ -377,11 +410,11 @@ app.post('/api/fitness-tribe/recipes/:username', authenticateToken, async (req, 
 
         // You can set a default duration_weeks or extract from another answer if you add it to the quiz
         const userData = {
-          weight: parseFloat(ans["3.What is your current weight?"]),
-          height: parseFloat(ans["4.What is your height?"]),
-          age: parseInt(ans["1.What is your age?"], 10),
-          sex: ans["2.What is your gender?"]?.toLowerCase(),
-          goal: convertGoal(ans["5.What is your primary goal?"]),
+          weight,
+          height,
+          age,
+          sex,
+          goal,
           dietary_preferences,
           food_intolerances,
           duration_weeks: 4 
@@ -439,6 +472,27 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
 
         const ans = latestAnswers[0].answers;
 
+        // Validate required fields
+        const weight = parseFloat(ans["3.What is your current weight?"]);
+        const height = parseFloat(ans["4.What is your height?"]);
+        const age = parseInt(ans["1.What is your age?"], 10);
+        const sex = ans["2.What is your gender?"]?.toLowerCase();
+        const goal = convertGoal(ans["5.What is your primary goal?"]);
+
+        if (
+          isNaN(weight) ||
+          isNaN(height) ||
+          isNaN(age) ||
+          !sex ||
+          typeof sex !== "string" ||
+          !goal ||
+          typeof goal !== "string"
+        ) {
+          return res.status(400).json({
+            error: "Missing or invalid quiz answers. Please complete the quiz with valid data."
+          });
+        }
+
         // Extract workouts_per_week from quiz answers (example: question 8)
         let workouts_per_week = 3;
         // Accept only values between 2 and 7
@@ -462,11 +516,11 @@ app.post('/api/fitness-tribe/workout/:username', authenticateToken, async (req, 
         }
 
         const userData = {
-          weight: parseFloat(ans["3.What is your current weight?"]),
-          height: parseFloat(ans["4.What is your height?"]),
-          age: parseInt(ans["1.What is your age?"], 10),
-          sex: ans["2.What is your gender?"]?.toLowerCase(),
-          goal: convertGoal(ans["5.What is your primary goal?"]),
+          weight,
+          height,
+          age,
+          sex,
+          goal,
           workouts_per_week
         };
 
