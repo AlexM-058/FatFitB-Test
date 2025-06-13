@@ -54,18 +54,20 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
 app.use(cookieParser());
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://fatfit.onrender.com",
-    "https://fatfit.netlify.app",
-    "https://fatfitb-test.onrender.com",
-    
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://fatfit.onrender.com",
+      "https://fatfit.netlify.app/",
+      "https://fatfit.netlify.app",
+      "https://fatfitb-test.onrender.com",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Parse JSON bodies
 app.use(express.json());
